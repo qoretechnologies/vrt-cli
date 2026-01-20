@@ -6,8 +6,7 @@ build/
 .DS_Store
 coverage/
 .nyc_output/
-.vrt/screenshots/
-*.png
+.vrt/screenshots/.vrt/*.png
 *.jpg
 *.jpeg
 *.gif
