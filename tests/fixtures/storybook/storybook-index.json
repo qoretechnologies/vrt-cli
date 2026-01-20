@@ -1,0 +1,14 @@
+{
+  "stories": {
+    "component-c--primary": {
+      "id": "component-c--primary",
+      "title": "Component C",
+      "name": "Primary"
+    },
+    "component-c--secondary": {
+      "id": "component-c--secondary",
+      "title": "Component C",
+      "name": "Secondary"
+    }
+  }
+}
