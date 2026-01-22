@@ -10,3 +10,6 @@ coverage/
 *.jpg
 *.jpeg
 *.gif
+
+*storybook.log
+storybook-static
