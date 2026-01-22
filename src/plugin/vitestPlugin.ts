@@ -1,4 +1,5 @@
 import { promises as fs } from 'node:fs';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Plugin } from 'vitest/config';
@@ -41,9 +42,13 @@ export const qlipVitestPlugin = (
         tool: { name: TOOL_NAME, version },
       };
 
-      const setupFile = fileURLToPath(
+      const setupTs = fileURLToPath(
         new URL('../runtime/setup.ts', import.meta.url),
       );
+      const setupJs = fileURLToPath(
+        new URL('../runtime/setup.js', import.meta.url),
+      );
+      const setupFile = existsSync(setupTs) ? setupTs : setupJs;
       const existingSetupFiles = config.test?.setupFiles;
       const setupFiles = new Set<string>();
       if (typeof existingSetupFiles === 'string') {

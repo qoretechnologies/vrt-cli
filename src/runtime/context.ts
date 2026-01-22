@@ -23,7 +23,17 @@ const readConfig = (): QlipRuntimeConfig | undefined => {
   if (globalValue) {
     return globalValue;
   }
-  return typeof __QLIP_CONFIG__ === 'undefined' ? undefined : __QLIP_CONFIG__;
+  if (typeof __QLIP_CONFIG__ === 'undefined') {
+    return undefined;
+  }
+  if (typeof __QLIP_CONFIG__ === 'string') {
+    try {
+      return JSON.parse(__QLIP_CONFIG__) as QlipRuntimeConfig;
+    } catch {
+      return undefined;
+    }
+  }
+  return __QLIP_CONFIG__;
 };
 
 export const getRuntimeState = (): QlipRuntimeState | null => {
