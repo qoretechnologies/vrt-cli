@@ -10,6 +10,7 @@ export interface QlipCaptureOptions {
   pauseAnimationsAtEnd?: boolean;
   waitForIdleMs?: number;
   maxWaitForIdleMs?: number;
+  ignoreElements?: string[];
 }
 
 export interface QlipParameters extends QlipCaptureOptions {

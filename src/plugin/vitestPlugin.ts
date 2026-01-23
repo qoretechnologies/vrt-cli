@@ -43,6 +43,7 @@ export const qlipVitestPlugin = (
           captureOnError: options.captureOnError ?? false,
           waitForIdleMs: options.waitForIdleMs ?? 300,
           maxWaitForIdleMs: options.maxWaitForIdleMs ?? 2000,
+          ignoreElements: options.ignoreElements ?? [],
         },
         tool: { name: TOOL_NAME, version },
       };

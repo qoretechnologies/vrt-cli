@@ -13,6 +13,7 @@ describe('resolveQlipOptions', () => {
         captureOnError: false,
         waitForIdleMs: 300,
         maxWaitForIdleMs: 2000,
+        ignoreElements: [],
       },
       story: {
         skip: true,
@@ -21,6 +22,7 @@ describe('resolveQlipOptions', () => {
         pauseAnimationsAtEnd: true,
         waitForIdleMs: 500,
         maxWaitForIdleMs: 4000,
+        ignoreElements: ['.story-mask'],
       },
       override: {
         skip: false,
@@ -29,6 +31,7 @@ describe('resolveQlipOptions', () => {
         pauseAnimationsAtEnd: false,
         waitForIdleMs: 100,
         maxWaitForIdleMs: 800,
+        ignoreElements: ['[data-testid="mask"]'],
       },
     });
 
@@ -39,6 +42,7 @@ describe('resolveQlipOptions', () => {
       pauseAnimationsAtEnd: false,
       waitForIdleMs: 100,
       maxWaitForIdleMs: 800,
+      ignoreElements: ['[data-testid="mask"]'],
     });
   });
 
@@ -53,6 +57,7 @@ describe('resolveQlipOptions', () => {
         captureOnError: false,
         waitForIdleMs: 300,
         maxWaitForIdleMs: 2000,
+        ignoreElements: [],
       },
       story: {
         skip: true,
@@ -61,6 +66,7 @@ describe('resolveQlipOptions', () => {
         pauseAnimationsAtEnd: true,
         waitForIdleMs: 500,
         maxWaitForIdleMs: 4000,
+        ignoreElements: ['.story-mask'],
       },
     });
 
@@ -71,6 +77,7 @@ describe('resolveQlipOptions', () => {
       pauseAnimationsAtEnd: true,
       waitForIdleMs: 500,
       maxWaitForIdleMs: 4000,
+      ignoreElements: ['.story-mask'],
     });
   });
 
@@ -85,6 +92,7 @@ describe('resolveQlipOptions', () => {
         captureOnError: false,
         waitForIdleMs: 300,
         maxWaitForIdleMs: 2000,
+        ignoreElements: [],
       },
     });
 
@@ -95,6 +103,7 @@ describe('resolveQlipOptions', () => {
       pauseAnimationsAtEnd: false,
       waitForIdleMs: 300,
       maxWaitForIdleMs: 2000,
+      ignoreElements: [],
     });
   });
 });

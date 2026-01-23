@@ -15,6 +15,7 @@ describe('createManifest', () => {
         captureOnError: false,
         waitForIdleMs: 300,
         maxWaitForIdleMs: 2000,
+        ignoreElements: [],
       },
       tool: { name: 'qlip', version: '0.1.0' },
       createdAt: new Date('2025-01-02T03:04:05.000Z'),

@@ -198,6 +198,42 @@ const waitForDomIdle = async (idleMs: number, maxWaitMs: number) => {
   });
 };
 
+const applyIgnoreMasks = (selectors: string[]) => {
+  if (!globalThis.document || selectors.length === 0) {
+    return () => undefined;
+  }
+
+  const doc = globalThis.document;
+  const masks: HTMLElement[] = [];
+  for (const selector of selectors) {
+    const nodes = Array.from(doc.querySelectorAll<HTMLElement>(selector));
+    for (const node of nodes) {
+      const rect = node.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) {
+        continue;
+      }
+      const mask = doc.createElement('div');
+      mask.setAttribute('data-qlip-mask', selector);
+      mask.style.position = 'fixed';
+      mask.style.left = `${rect.left}px`;
+      mask.style.top = `${rect.top}px`;
+      mask.style.width = `${rect.width}px`;
+      mask.style.height = `${rect.height}px`;
+      mask.style.background = '#000';
+      mask.style.pointerEvents = 'none';
+      mask.style.zIndex = '2147483647';
+      doc.body.appendChild(mask);
+      masks.push(mask);
+    }
+  }
+
+  return () => {
+    for (const mask of masks) {
+      mask.remove();
+    }
+  };
+};
+
 const pickUniqueErrorName = (entries: QlipManifestEntry[]) => {
   const reserved = new Set(
     entries
@@ -372,13 +408,15 @@ const captureScreenshot = async ({
 
   let status: QlipEntryStatus = 'captured';
   let error: { message: string; stack?: string } | null = null;
+  let cleanupMasks: (() => void) | null = null;
   try {
+    await page.viewport(resolved.viewport.width, resolved.viewport.height);
     applyAnimationControl({
       disableAnimations: resolved.disableAnimations,
       pauseAnimationsAtEnd: resolved.pauseAnimationsAtEnd,
     });
     await waitForDomIdle(resolved.waitForIdleMs, resolved.maxWaitForIdleMs);
-    await page.viewport(resolved.viewport.width, resolved.viewport.height);
+    cleanupMasks = applyIgnoreMasks(resolved.ignoreElements);
     await page.screenshot({ path: absolutePath, save: true });
   } catch (err) {
     status = 'failed';
@@ -387,6 +425,10 @@ const captureScreenshot = async ({
       message: typedError.message,
       stack: typedError.stack,
     };
+  } finally {
+    if (cleanupMasks) {
+      cleanupMasks();
+    }
   }
 
   const entry = buildEntry({

@@ -7,6 +7,7 @@ export interface QlipResolvedOptions {
   pauseAnimationsAtEnd: boolean;
   waitForIdleMs: number;
   maxWaitForIdleMs: number;
+  ignoreElements: string[];
 }
 
 export const resolveQlipOptions = ({
@@ -37,5 +38,9 @@ export const resolveQlipOptions = ({
       override?.maxWaitForIdleMs ??
       story?.maxWaitForIdleMs ??
       defaults.maxWaitForIdleMs,
+    ignoreElements:
+      override?.ignoreElements ??
+      story?.ignoreElements ??
+      defaults.ignoreElements,
   };
 };

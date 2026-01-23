@@ -80,6 +80,7 @@ export const LoggedIn = {
       captureOnError: false,
       waitForIdleMs: 300,
       maxWaitForIdleMs: 2000,
+      ignoreElements: ['.toast', '[data-qlip-ignore]'],
     },
   },
 };
@@ -102,10 +103,13 @@ qlipVitestPlugin({
   captureOnError: false,
   waitForIdleMs: 300,
   maxWaitForIdleMs: 2000,
+  ignoreElements: [],
 });
 ```
 
 `waitForIdleMs` waits for DOM mutations to settle before taking a screenshot. This is especially useful for animation libraries like `react-spring` that update inline styles via `requestAnimationFrame`, which bypasses CSS-based animation disabling. Increase it if you still catch mid-transition frames, or lower it for faster runs when your UI is static. `maxWaitForIdleMs` caps the wait so stories with continuously changing UI still complete.
+
+`ignoreElements` lets you provide CSS selectors to mask before capture. Qlip draws solid overlays on matching elements so layout stays intact while visual diffs ignore those regions.
 
 ## Output layout
 
