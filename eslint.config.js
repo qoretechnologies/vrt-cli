@@ -8,8 +8,10 @@ const storybookRules = storybookPlugin.configs?.recommended?.rules ?? {};
 
 export default [
   {
-    files: ['**/*.{ts,tsx}'],
     ignores: ['dist/**'],
+  },
+  {
+    files: ['**/*.{ts,tsx}'],
     languageOptions: {
       parser: tsParser,
       parserOptions: {

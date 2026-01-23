@@ -38,6 +38,11 @@ export const qlipVitestPlugin = (
           outputDir,
           viewport: options.viewport ?? DEFAULT_VIEWPORT,
           skip: false,
+          disableAnimations: options.disableAnimations ?? false,
+          pauseAnimationsAtEnd: options.pauseAnimationsAtEnd ?? false,
+          captureOnError: options.captureOnError ?? false,
+          waitForIdleMs: options.waitForIdleMs ?? 300,
+          maxWaitForIdleMs: options.maxWaitForIdleMs ?? 2000,
         },
         tool: { name: TOOL_NAME, version },
       };

@@ -1,0 +1,1 @@
+- Follow the DRY coding principle = Don't Repeat Yourself - if something is already defined elsewhere, avoid duplicating it. Extend interfaces, combine types, build utilities and helpers instead of redefining the same properties or logic.

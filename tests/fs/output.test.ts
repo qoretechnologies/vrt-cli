@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  AUTO_ERROR_SCREENSHOT_BASE,
   buildAutoScreenshotPath,
   buildManualScreenshotPath,
   generateBuildId,
@@ -22,11 +23,29 @@ describe('output helpers', () => {
     const pathInfo = buildAutoScreenshotPath({
       buildDir: '/tmp/qlip/20250102-030405',
       storyId: 'example--page',
+      storyTitle: 'Example/Page',
+      storyName: 'Logged In',
     });
 
-    expect(pathInfo.relativePath).toBe('stories/example--page.png');
+    expect(pathInfo.relativePath).toBe(
+      'stories/auto/Example_Page--Logged_In.png',
+    );
     expect(pathInfo.absolutePath).toBe(
-      '/tmp/qlip/20250102-030405/stories/example--page.png',
+      '/tmp/qlip/20250102-030405/stories/auto/Example_Page--Logged_In.png',
+    );
+  });
+
+  it('builds auto paths from storyId when title is missing', () => {
+    const pathInfo = buildAutoScreenshotPath({
+      buildDir: '/tmp/qlip/20250102-030405',
+      storyId: 'example-button--primary',
+    });
+
+    expect(pathInfo.relativePath).toBe(
+      'stories/auto/example-button--primary.png',
+    );
+    expect(pathInfo.absolutePath).toBe(
+      '/tmp/qlip/20250102-030405/stories/auto/example-button--primary.png',
     );
   });
 
@@ -34,14 +53,31 @@ describe('output helpers', () => {
     const pathInfo = buildManualScreenshotPath({
       buildDir: '/tmp/qlip/20250102-030405',
       storyId: 'example--page',
+      storyTitle: 'Example/Page',
+      storyName: 'Logged In',
       screenshotName: 'after-login',
     });
 
     expect(pathInfo.relativePath).toBe(
-      'stories/example--page/after-login.png',
+      'stories/manual/Example_Page--Logged_In--after-login.png',
     );
     expect(pathInfo.absolutePath).toBe(
-      '/tmp/qlip/20250102-030405/stories/example--page/after-login.png',
+      '/tmp/qlip/20250102-030405/stories/manual/Example_Page--Logged_In--after-login.png',
+    );
+  });
+
+  it('routes error screenshots to the error folder', () => {
+    const pathInfo = buildManualScreenshotPath({
+      buildDir: '/tmp/qlip/20250102-030405',
+      storyId: 'example-button--primary',
+      screenshotName: AUTO_ERROR_SCREENSHOT_BASE,
+    });
+
+    expect(pathInfo.relativePath).toBe(
+      `stories/error/example-button--primary--${AUTO_ERROR_SCREENSHOT_BASE}.png`,
+    );
+    expect(pathInfo.absolutePath).toBe(
+      `/tmp/qlip/20250102-030405/stories/error/example-button--primary--${AUTO_ERROR_SCREENSHOT_BASE}.png`,
     );
   });
 });

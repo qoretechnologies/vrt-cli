@@ -3,6 +3,7 @@ import { QlipManifest, QlipResolvedDefaults } from '../types.js';
 export const TOOL_NAME = 'qlip';
 
 export const DEFAULT_OUTPUT_DIR = './qlip/screenshots';
+export const AUTO_ERROR_SCREENSHOT_BASE = 'qlip-auto-error-capture';
 export const DEFAULT_VIEWPORT = { width: 1280, height: 720 };
 
 export const generateBuildId = (date: Date = new Date()): string => {
@@ -37,17 +38,49 @@ export const joinPath = (...parts: string[]): string => {
   return result;
 };
 
+const splitStoryId = (storyId: string) => {
+  const [titlePart, namePart] = storyId.split('--');
+  return {
+    titlePart: titlePart || storyId,
+    namePart: namePart || undefined,
+  };
+};
+
+const buildStoryBaseName = ({
+  storyTitle,
+  storyName,
+  storyId,
+}: {
+  storyTitle?: string;
+  storyName?: string;
+  storyId: string;
+}) => {
+  const { titlePart, namePart } = splitStoryId(storyId);
+  const resolvedTitle = storyTitle ?? titlePart;
+  const resolvedName =
+    storyName && storyName !== 'storyFn' ? storyName : namePart ?? storyId;
+  const safeTitle = sanitizeSegment(resolvedTitle);
+  const safeName = sanitizeSegment(resolvedName);
+  return `${safeTitle}--${safeName}`;
+};
+
+const buildKindDir = (kind: 'auto' | 'manual' | 'error') =>
+  joinPath('stories', kind);
+
 export const buildAutoScreenshotPath = ({
   buildDir,
   storyId,
+  storyTitle,
+  storyName,
 }: {
   buildDir: string;
   storyId: string;
+  storyTitle?: string;
+  storyName?: string;
 }) => {
-  const safeId = sanitizeSegment(storyId);
-  const relativePath = `stories/${safeId}.png`;
+  const baseName = buildStoryBaseName({ storyTitle, storyName, storyId });
+  const relativePath = `${buildKindDir('auto')}/${baseName}.png`;
   return {
-    safeId,
     relativePath,
     absolutePath: joinPath(buildDir, relativePath),
   };
@@ -56,17 +89,23 @@ export const buildAutoScreenshotPath = ({
 export const buildManualScreenshotPath = ({
   buildDir,
   storyId,
+  storyTitle,
+  storyName,
   screenshotName,
 }: {
   buildDir: string;
   storyId: string;
+  storyTitle?: string;
+  storyName?: string;
   screenshotName: string;
 }) => {
-  const safeId = sanitizeSegment(storyId);
+  const baseName = buildStoryBaseName({ storyTitle, storyName, storyId });
   const safeName = sanitizeSegment(screenshotName);
-  const relativePath = `stories/${safeId}/${safeName}.png`;
+  const kind = safeName.startsWith(AUTO_ERROR_SCREENSHOT_BASE)
+    ? 'error'
+    : 'manual';
+  const relativePath = `${buildKindDir(kind)}/${baseName}--${safeName}.png`;
   return {
-    safeId,
     safeName,
     relativePath,
     absolutePath: joinPath(buildDir, relativePath),

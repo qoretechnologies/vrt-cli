@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { captureAutoScreenshot, screenshot } from '../../src/runtime/screenshot.js';
+import {
+  captureAutoScreenshot,
+  captureErrorScreenshot,
+  screenshot,
+} from '../../src/runtime/screenshot.js';
 import { getRuntimeState } from '../../src/runtime/context.js';
 import type { QlipRuntimeConfig } from '../../src/types.js';
 
@@ -22,6 +26,9 @@ const runtimeConfig: QlipRuntimeConfig = {
     outputDir: './qlip/screenshots',
     viewport: { width: 200, height: 200 },
     skip: false,
+    disableAnimations: false,
+    pauseAnimationsAtEnd: false,
+    captureOnError: false,
   },
   tool: { name: 'qlip', version: '0.1.0' },
 };
@@ -64,6 +71,22 @@ describe('screenshot capture', () => {
     expect(state?.manifest.entries[1].screenshotName).toBe('step-2');
   });
 
+  it('honors manual screenshot name from options', async () => {
+    const { page } = await import('@vitest/browser/context');
+    page.screenshot.mockResolvedValue('ok');
+
+    const ctx = {
+      id: 'example--button',
+      title: 'Example/Button',
+      name: 'Primary',
+    };
+
+    await screenshot(ctx, { name: 'paused' });
+
+    const state = getRuntimeState();
+    expect(state?.manifest.entries[0].screenshotName).toBe('paused');
+  });
+
   it('respects skip for auto screenshots', async () => {
     const { page } = await import('@vitest/browser/context');
     page.screenshot.mockResolvedValue('ok');
@@ -102,6 +125,35 @@ describe('screenshot capture', () => {
     await screenshot(ctx, { viewport: { width: 300, height: 300 } });
 
     expect(page.viewport).toHaveBeenCalledWith(300, 300);
+  });
+
+  it('captures error screenshot when enabled', async () => {
+    const { page } = await import('@vitest/browser/context');
+    page.screenshot.mockResolvedValue('ok');
+
+    globalThis.__QLIP_CONFIG__ = {
+      ...runtimeConfig,
+      defaults: {
+        ...runtimeConfig.defaults,
+        captureOnError: true,
+      },
+    };
+
+    await captureErrorScreenshot({
+      task: {
+        meta: { storyId: 'example--page' },
+        name: 'Logged In',
+        suite: { name: 'Example/Page' },
+      },
+      story: {
+        id: 'example--page',
+      },
+    } as never);
+
+    const state = getRuntimeState();
+    const entry = state?.manifest.entries[0];
+    expect(entry?.kind).toBe('manual');
+    expect(entry?.screenshotName).toBe('qlip-auto-error-capture');
   });
 
   it('records failures when capture throws', async () => {

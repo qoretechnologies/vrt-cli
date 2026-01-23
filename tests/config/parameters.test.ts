@@ -8,20 +8,37 @@ describe('resolveQlipOptions', () => {
         outputDir: './qlip/screenshots',
         viewport: { width: 1200, height: 800 },
         skip: false,
+        disableAnimations: false,
+        pauseAnimationsAtEnd: false,
+        captureOnError: false,
+        waitForIdleMs: 300,
+        maxWaitForIdleMs: 2000,
       },
       story: {
         skip: true,
         viewport: { width: 800, height: 600 },
+        disableAnimations: true,
+        pauseAnimationsAtEnd: true,
+        waitForIdleMs: 500,
+        maxWaitForIdleMs: 4000,
       },
       override: {
         skip: false,
         viewport: { width: 640, height: 480 },
+        disableAnimations: false,
+        pauseAnimationsAtEnd: false,
+        waitForIdleMs: 100,
+        maxWaitForIdleMs: 800,
       },
     });
 
     expect(resolved).toEqual({
       skip: false,
       viewport: { width: 640, height: 480 },
+      disableAnimations: false,
+      pauseAnimationsAtEnd: false,
+      waitForIdleMs: 100,
+      maxWaitForIdleMs: 800,
     });
   });
 
@@ -31,16 +48,29 @@ describe('resolveQlipOptions', () => {
         outputDir: './qlip/screenshots',
         viewport: { width: 1200, height: 800 },
         skip: false,
+        disableAnimations: false,
+        pauseAnimationsAtEnd: false,
+        captureOnError: false,
+        waitForIdleMs: 300,
+        maxWaitForIdleMs: 2000,
       },
       story: {
         skip: true,
         viewport: { width: 800, height: 600 },
+        disableAnimations: true,
+        pauseAnimationsAtEnd: true,
+        waitForIdleMs: 500,
+        maxWaitForIdleMs: 4000,
       },
     });
 
     expect(resolved).toEqual({
       skip: true,
       viewport: { width: 800, height: 600 },
+      disableAnimations: true,
+      pauseAnimationsAtEnd: true,
+      waitForIdleMs: 500,
+      maxWaitForIdleMs: 4000,
     });
   });
 
@@ -50,12 +80,21 @@ describe('resolveQlipOptions', () => {
         outputDir: './qlip/screenshots',
         viewport: { width: 1200, height: 800 },
         skip: false,
+        disableAnimations: false,
+        pauseAnimationsAtEnd: false,
+        captureOnError: false,
+        waitForIdleMs: 300,
+        maxWaitForIdleMs: 2000,
       },
     });
 
     expect(resolved).toEqual({
       skip: false,
       viewport: { width: 1200, height: 800 },
+      disableAnimations: false,
+      pauseAnimationsAtEnd: false,
+      waitForIdleMs: 300,
+      maxWaitForIdleMs: 2000,
     });
   });
 });

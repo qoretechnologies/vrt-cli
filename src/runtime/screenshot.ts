@@ -7,6 +7,7 @@ import {
 } from '../types.js';
 import { resolveQlipOptions } from '../config/parameters.js';
 import {
+  AUTO_ERROR_SCREENSHOT_BASE,
   buildAutoScreenshotPath,
   buildManualScreenshotPath,
   joinPath,
@@ -20,6 +21,7 @@ import {
   updateStats,
 } from './context.js';
 import type { TestContext } from 'vitest';
+import type { QlipParameters, QlipManifestEntry } from '../types.js';
 
 const ensureBrowserContext = async () => {
   if (!globalThis.__vitest_browser__) {
@@ -47,6 +49,171 @@ const resolveStoryInfo = (ctx: QlipStoryContext) => {
   };
 };
 
+const readStoryFromStore = (storyId: string) => {
+  const globalAny = globalThis as {
+    __STORYBOOK_PREVIEW__?: {
+      storyStore?: { storyIndex?: Record<string, unknown> | { v?: Record<string, unknown> } };
+      storyIndex?: Record<string, unknown> | { v?: Record<string, unknown> };
+    };
+    __STORYBOOK_STORY_STORE__?: {
+      storyIndex?: Record<string, unknown> | { v?: Record<string, unknown> };
+    };
+  };
+
+  const store =
+    globalAny.__STORYBOOK_PREVIEW__?.storyStore ??
+    globalAny.__STORYBOOK_STORY_STORE__;
+  const previewIndex = globalAny.__STORYBOOK_PREVIEW__?.storyIndex;
+  const rawIndex =
+    (store?.storyIndex as { v?: Record<string, unknown> } | Record<string, unknown> | undefined)?.v ??
+    store?.storyIndex ??
+    (previewIndex as { v?: Record<string, unknown> } | Record<string, unknown> | undefined)?.v ??
+    previewIndex;
+
+  const entryMap =
+    (rawIndex as { entries?: Record<string, unknown> } | undefined)?.entries ??
+    (rawIndex as Record<string, unknown> | undefined);
+
+  const entry = (entryMap as { [key: string]: { title?: string; name?: string } } | undefined)?.[
+    storyId
+  ];
+  if (!entry) {
+    return null;
+  }
+  return {
+    title: entry.title,
+    name: entry.name,
+  };
+};
+
+const shouldCaptureOnError = (
+  defaults: { captureOnError: boolean },
+  story?: QlipParameters,
+) => story?.captureOnError ?? defaults.captureOnError;
+
+const applyAnimationControl = ({
+  disableAnimations,
+  pauseAnimationsAtEnd,
+}: {
+  disableAnimations: boolean;
+  pauseAnimationsAtEnd: boolean;
+}) => {
+  if (!globalThis.document) {
+    return;
+  }
+
+  const doc = globalThis.document;
+  const id = '__qlip-animation-control';
+  const existing = doc.getElementById(id);
+
+  if (!disableAnimations && !pauseAnimationsAtEnd) {
+    if (existing) {
+      existing.remove();
+    }
+    return;
+  }
+
+  const style = existing ?? doc.createElement('style');
+  style.id = id;
+  if (disableAnimations) {
+    style.textContent = `
+      *, *::before, *::after {
+        animation: none !important;
+        transition: none !important;
+        scroll-behavior: auto !important;
+      }
+    `;
+  } else {
+    style.textContent = `
+      *, *::before, *::after {
+        animation-play-state: paused !important;
+        transition-duration: 0s !important;
+        transition-delay: 0s !important;
+      }
+    `;
+  }
+  if (!existing) {
+    doc.head.appendChild(style);
+  }
+
+  if (typeof doc.getAnimations === 'function') {
+    const animations = doc.getAnimations();
+    for (const animation of animations) {
+      if (disableAnimations && typeof animation.finish === 'function') {
+        animation.finish();
+      } else if (
+        pauseAnimationsAtEnd &&
+        typeof animation.pause === 'function'
+      ) {
+        animation.pause();
+      }
+    }
+  }
+};
+
+const waitForDomIdle = async (idleMs: number, maxWaitMs: number) => {
+  if (idleMs <= 0) {
+    return;
+  }
+
+  const doc = globalThis.document;
+  if (!doc || typeof MutationObserver === 'undefined') {
+    await new Promise((resolve) => setTimeout(resolve, idleMs));
+    return;
+  }
+
+  await new Promise<void>((resolve) => {
+    const start = Date.now();
+    const resolvedMaxWait = Math.max(idleMs, maxWaitMs);
+    let lastChange = Date.now();
+    let done = false;
+
+    const finish = () => {
+      if (done) {
+        return;
+      }
+      done = true;
+      observer.disconnect();
+      clearInterval(checkInterval);
+      resolve();
+    };
+
+    const observer = new MutationObserver(() => {
+      lastChange = Date.now();
+    });
+
+    observer.observe(doc.documentElement, {
+      attributes: true,
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+
+    const checkInterval = setInterval(() => {
+      const now = Date.now();
+      if (now - lastChange >= idleMs || now - start >= resolvedMaxWait) {
+        finish();
+      }
+    }, Math.min(50, idleMs));
+  });
+};
+
+const pickUniqueErrorName = (entries: QlipManifestEntry[]) => {
+  const reserved = new Set(
+    entries
+      .filter((entry) => entry.screenshotName.startsWith(AUTO_ERROR_SCREENSHOT_BASE))
+      .map((entry) => entry.screenshotName),
+  );
+  if (!reserved.has(AUTO_ERROR_SCREENSHOT_BASE)) {
+    return AUTO_ERROR_SCREENSHOT_BASE;
+  }
+  let index = 2;
+  while (reserved.has(`${AUTO_ERROR_SCREENSHOT_BASE}-${index}`)) {
+    index += 1;
+  }
+  return `${AUTO_ERROR_SCREENSHOT_BASE}-${index}`;
+};
+
 const resolveManualArgs = (
   nameOrOptions?: string | QlipScreenshotOptions,
   options?: QlipScreenshotOptions,
@@ -54,7 +221,7 @@ const resolveManualArgs = (
   if (typeof nameOrOptions === 'string') {
     return { name: nameOrOptions, options };
   }
-  return { name: undefined, options: nameOrOptions };
+  return { name: nameOrOptions?.name, options: nameOrOptions };
 };
 
 const buildEntry = ({
@@ -149,11 +316,15 @@ const captureScreenshot = async ({
             ? buildManualScreenshotPath({
                 buildDir: runtime.config.buildDir,
                 storyId: story.id,
+                storyTitle: story.title,
+                storyName: story.name,
                 screenshotName: name,
               }).relativePath
             : buildAutoScreenshotPath({
                 buildDir: runtime.config.buildDir,
                 storyId: story.id,
+                storyTitle: story.title,
+                storyName: story.name,
               }).relativePath,
         viewport: resolved.viewport,
         status: 'skipped',
@@ -182,6 +353,8 @@ const captureScreenshot = async ({
     const pathInfo = buildManualScreenshotPath({
       buildDir: runtime.config.buildDir,
       storyId: story.id,
+      storyTitle: story.title,
+      storyName: story.name,
       screenshotName: name,
     });
     relativePath = pathInfo.relativePath;
@@ -190,6 +363,8 @@ const captureScreenshot = async ({
     const pathInfo = buildAutoScreenshotPath({
       buildDir: runtime.config.buildDir,
       storyId: story.id,
+      storyTitle: story.title,
+      storyName: story.name,
     });
     relativePath = pathInfo.relativePath;
     absolutePath = pathInfo.absolutePath;
@@ -198,6 +373,11 @@ const captureScreenshot = async ({
   let status: QlipEntryStatus = 'captured';
   let error: { message: string; stack?: string } | null = null;
   try {
+    applyAnimationControl({
+      disableAnimations: resolved.disableAnimations,
+      pauseAnimationsAtEnd: resolved.pauseAnimationsAtEnd,
+    });
+    await waitForDomIdle(resolved.waitForIdleMs, resolved.maxWaitForIdleMs);
     await page.viewport(resolved.viewport.width, resolved.viewport.height);
     await page.screenshot({ path: absolutePath, save: true });
   } catch (err) {
@@ -283,6 +463,15 @@ export const captureAutoScreenshot = async (ctx: QlipTestContext) => {
   if (!story.id && typeof metaStoryId === 'string') {
     story.id = metaStoryId;
   }
+  if (story.id && (!story.title || !story.name)) {
+    const storeStory = readStoryFromStore(story.id);
+    if (storeStory?.title && !story.title) {
+      story.title = storeStory.title;
+    }
+    if (storeStory?.name && !story.name) {
+      story.name = storeStory.name;
+    }
+  }
   if (!story.name && ctx.task.name) {
     story.name = ctx.task.name;
   }
@@ -292,5 +481,46 @@ export const captureAutoScreenshot = async (ctx: QlipTestContext) => {
   await captureScreenshot({
     kind: 'auto',
     story,
+  });
+};
+
+export const captureErrorScreenshot = async (ctx: QlipTestContext) => {
+  const runtime = initRuntimeState();
+  if (!runtime) {
+    return;
+  }
+  const storyContext = ctx.story ?? {};
+  const story = resolveStoryInfo(storyContext);
+  const errorMetaStoryId = (ctx.task.meta as { storyId?: string } | undefined)
+    ?.storyId;
+  if (!story.id && typeof errorMetaStoryId === 'string') {
+    story.id = errorMetaStoryId;
+  }
+  const params = story.parameters;
+  if (resolveQlipOptions({ defaults: runtime.config.defaults, story: params }).skip) {
+    return;
+  }
+  if (!shouldCaptureOnError(runtime.config.defaults, params)) {
+    return;
+  }
+  if (story.id && (!story.title || !story.name)) {
+    const storeStory = readStoryFromStore(story.id);
+    if (storeStory?.title && !story.title) {
+      story.title = storeStory.title;
+    }
+    if (storeStory?.name && !story.name) {
+      story.name = storeStory.name;
+    }
+  }
+  if (!story.name && ctx.task.name) {
+    story.name = ctx.task.name;
+  }
+  if (!story.title && ctx.task.suite?.name) {
+    story.title = ctx.task.suite.name;
+  }
+  await captureScreenshot({
+    kind: 'manual',
+    story,
+    screenshotName: pickUniqueErrorName(runtime.manifest.entries),
   });
 };

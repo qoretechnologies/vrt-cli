@@ -75,6 +75,11 @@ export const LoggedIn = {
     qlip: {
       skip: false,
       viewport: { width: 1280, height: 720 },
+      disableAnimations: true,
+      pauseAnimationsAtEnd: false,
+      captureOnError: false,
+      waitForIdleMs: 300,
+      maxWaitForIdleMs: 2000,
     },
   },
 };
@@ -86,14 +91,31 @@ Options precedence:
 2. `parameters.qlip`
 3. Plugin defaults
 
+## Plugin options
+
+```ts
+qlipVitestPlugin({
+  outputDir: './qlip/screenshots',
+  viewport: { width: 1280, height: 720 },
+  disableAnimations: false,
+  pauseAnimationsAtEnd: false,
+  captureOnError: false,
+  waitForIdleMs: 300,
+  maxWaitForIdleMs: 2000,
+});
+```
+
+`waitForIdleMs` waits for DOM mutations to settle before taking a screenshot. This is especially useful for animation libraries like `react-spring` that update inline styles via `requestAnimationFrame`, which bypasses CSS-based animation disabling. Increase it if you still catch mid-transition frames, or lower it for faster runs when your UI is static. `maxWaitForIdleMs` caps the wait so stories with continuously changing UI still complete.
+
 ## Output layout
 
 ```
 ./qlip/screenshots/
   <buildId>/
     stories/
-      <storyId>.png
-      <storyId>/<screenshotName>.png
+      auto/<storyTitle>--<storyName>.png
+      manual/<storyTitle>--<storyName>--<screenshotName>.png
+      error/<storyTitle>--<storyName>--qlip-auto-error-capture.png
     manifest.json
 ```
 

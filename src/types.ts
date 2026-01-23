@@ -3,22 +3,29 @@ export interface QlipViewport {
   height: number;
 }
 
-export interface QlipParameters {
+export interface QlipCaptureOptions {
   skip?: boolean;
   viewport?: QlipViewport;
+  disableAnimations?: boolean;
+  pauseAnimationsAtEnd?: boolean;
+  waitForIdleMs?: number;
+  maxWaitForIdleMs?: number;
 }
 
-export interface QlipPluginOptions {
+export interface QlipParameters extends QlipCaptureOptions {
+  captureOnError?: boolean;
+}
+
+export interface QlipPluginOptions extends QlipCaptureOptions {
   outputDir?: string;
   buildId?: string;
-  viewport?: QlipViewport;
+  captureOnError?: boolean;
 }
 
-export interface QlipResolvedDefaults {
+export type QlipResolvedDefaults = Required<QlipCaptureOptions> & {
   outputDir: string;
-  viewport: QlipViewport;
-  skip: boolean;
-}
+  captureOnError: boolean;
+};
 
 export interface QlipRuntimeConfig {
   buildId: string;
@@ -28,10 +35,8 @@ export interface QlipRuntimeConfig {
   tool: { name: string; version: string };
 }
 
-export interface QlipScreenshotOptions {
+export interface QlipScreenshotOptions extends QlipCaptureOptions {
   name?: string;
-  skip?: boolean;
-  viewport?: QlipViewport;
 }
 
 export interface QlipStoryContext {
