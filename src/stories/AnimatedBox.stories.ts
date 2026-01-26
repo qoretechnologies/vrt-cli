@@ -15,8 +15,6 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 type StoryContext = Parameters<NonNullable<Story['play']>>[0];
 
-const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
 export const ShouldFinishFullyAnimated: Story = {
   parameters: {
     qlip: {

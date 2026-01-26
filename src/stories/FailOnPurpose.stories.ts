@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import { userEvent, within } from 'storybook/test';
 
 import { AnimatedBox } from './AnimatedBox.js';
+import type { QlipParameters } from '../types.js';
 
 const meta = {
   title: 'Example/Capture on Test Failure',
@@ -26,7 +27,8 @@ export const CaptureOnTestFailure: Story = {
   play: async (ctx: StoryContext) => {
     // Check if this story should be skipped (to prevent CI failures)
     // The skip parameter prevents screenshot capture, but we also need to skip the test
-    if (ctx.parameters?.qlip?.skip) {
+    const qlipParams = ctx.parameters?.qlip as QlipParameters | undefined;
+    if (qlipParams?.skip) {
       console.log('FailOnPurpose test skipped - set qlip.skip to false to test error screenshots');
       return;
     }
