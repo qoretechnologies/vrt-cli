@@ -15,22 +15,28 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 type StoryContext = Parameters<NonNullable<Story['play']>>[0];
 
-const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
 export const CaptureOnTestFailure: Story = {
   parameters: {
     qlip: {
       captureOnError: true,
+      // To test error screenshot capture, temporarily set skip to false
+      skip: true,
     },
   },
   play: async (ctx: StoryContext) => {
+    // Check if this story should be skipped (to prevent CI failures)
+    // The skip parameter prevents screenshot capture, but we also need to skip the test
+    if (ctx.parameters?.qlip?.skip) {
+      console.log('FailOnPurpose test skipped - set qlip.skip to false to test error screenshots');
+      return;
+    }
+
     const canvas = within(ctx.canvasElement);
+
+    // This will intentionally fail - clicking a non-existent button
+    // An error screenshot will be captured due to captureOnError: true
     await userEvent.click(
       canvas.getByRole('button', { name: /missingButton/i }),
     );
-
-    await wait(350);
-
-    await userEvent.click(canvas.getByRole('button', { name: /toggle/i }));
   },
 };
