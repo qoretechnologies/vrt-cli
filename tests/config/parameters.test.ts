@@ -14,6 +14,9 @@ describe('resolveQlipOptions', () => {
         waitForIdleMs: 300,
         maxWaitForIdleMs: 2000,
         ignoreElements: [],
+        auto: true,
+        manual: true,
+        error: true,
       },
       story: {
         skip: true,
@@ -23,6 +26,9 @@ describe('resolveQlipOptions', () => {
         waitForIdleMs: 500,
         maxWaitForIdleMs: 4000,
         ignoreElements: ['.story-mask'],
+        auto: false,
+        manual: false,
+        error: false,
       },
       override: {
         skip: false,
@@ -32,6 +38,9 @@ describe('resolveQlipOptions', () => {
         waitForIdleMs: 100,
         maxWaitForIdleMs: 800,
         ignoreElements: ['[data-testid="mask"]'],
+        auto: true,
+        manual: true,
+        error: true,
       },
     });
 
@@ -43,6 +52,9 @@ describe('resolveQlipOptions', () => {
       waitForIdleMs: 100,
       maxWaitForIdleMs: 800,
       ignoreElements: ['[data-testid="mask"]'],
+      auto: true,
+      manual: true,
+      error: true,
     });
   });
 
@@ -58,6 +70,9 @@ describe('resolveQlipOptions', () => {
         waitForIdleMs: 300,
         maxWaitForIdleMs: 2000,
         ignoreElements: [],
+        auto: true,
+        manual: true,
+        error: true,
       },
       story: {
         skip: true,
@@ -67,6 +82,9 @@ describe('resolveQlipOptions', () => {
         waitForIdleMs: 500,
         maxWaitForIdleMs: 4000,
         ignoreElements: ['.story-mask'],
+        auto: false,
+        manual: false,
+        error: false,
       },
     });
 
@@ -78,6 +96,9 @@ describe('resolveQlipOptions', () => {
       waitForIdleMs: 500,
       maxWaitForIdleMs: 4000,
       ignoreElements: ['.story-mask'],
+      auto: false,
+      manual: false,
+      error: false,
     });
   });
 
@@ -93,6 +114,9 @@ describe('resolveQlipOptions', () => {
         waitForIdleMs: 300,
         maxWaitForIdleMs: 2000,
         ignoreElements: [],
+        auto: true,
+        manual: true,
+        error: true,
       },
     });
 
@@ -104,6 +128,9 @@ describe('resolveQlipOptions', () => {
       waitForIdleMs: 300,
       maxWaitForIdleMs: 2000,
       ignoreElements: [],
+      auto: true,
+      manual: true,
+      error: true,
     });
   });
 });

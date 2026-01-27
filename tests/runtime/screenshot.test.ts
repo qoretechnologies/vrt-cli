@@ -29,6 +29,12 @@ const runtimeConfig: QlipRuntimeConfig = {
     disableAnimations: false,
     pauseAnimationsAtEnd: false,
     captureOnError: false,
+    waitForIdleMs: 300,
+    maxWaitForIdleMs: 2000,
+    ignoreElements: [],
+    auto: true,
+    manual: true,
+    error: true,
   },
   tool: { name: 'qlip', version: '0.1.0' },
 };
