@@ -1,0 +1,97 @@
+name: Beta Release to NPM
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  beta-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.19.0
+          cache: "npm"
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run typecheck and lint
+        run: |
+          npm run typecheck
+          npm run lint
+
+      - name: Build package
+        run: npm run build
+
+      - name: Run unit tests
+        run: npm run test:unit
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Version as beta
+        id: version
+        run: |
+          # Get current version and create beta version
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          TIMESTAMP=$(date +%Y%m%d%H%M%S)
+          BETA_VERSION="${CURRENT_VERSION}-beta.${TIMESTAMP}"
+
+          # Update package.json with beta version
+          npm version $BETA_VERSION --no-git-tag-version
+
+          echo "version=$BETA_VERSION" >> $GITHUB_OUTPUT
+          echo "Beta version: $BETA_VERSION"
+
+      - name: Publish to NPM
+        run: npm publish --tag beta --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Discord notification success
+        uses: sarisia/actions-status-discord@v1
+        if: success()
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          status: success
+          title: "Beta Release Published"
+          nodetail: true
+          avatar_url: "https://github.com/qoretechnologies/qorus-vscode/blob/95ad81fa8654fe83bb41f68f4de42ae088298e59/public/q-symbol-small.png?raw=true"
+          username: "📸 qlip"
+          color: 0x00FF00
+          description: |
+            :rocket: Beta release `${{ steps.version.outputs.version }}` published successfully to NPM!
+
+            Install with: `npm install @qoretechnologies/qlip@beta`
+
+            Triggered by: `${{ github.triggering_actor }}`
+            [Action](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+      - name: Discord notification failure
+        uses: sarisia/actions-status-discord@v1
+        if: failure()
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          status: failure
+          title: "Beta Release Failed"
+          nodetail: true
+          avatar_url: "https://github.com/qoretechnologies/qorus-vscode/blob/95ad81fa8654fe83bb41f68f4de42ae088298e59/public/q-symbol-small.png?raw=true"
+          username: "📸 qlip"
+          color: 0xFF0000
+          description: |
+            :exclamation: Beta release to NPM failed!
+
+            Triggered by: `${{ github.triggering_actor }}`
+            [Action](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})

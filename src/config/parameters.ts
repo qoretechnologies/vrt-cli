@@ -8,6 +8,9 @@ export interface QlipResolvedOptions {
   waitForIdleMs: number;
   maxWaitForIdleMs: number;
   ignoreElements: string[];
+  auto: boolean;
+  manual: boolean;
+  error: boolean;
 }
 
 export const resolveQlipOptions = ({
@@ -42,5 +45,8 @@ export const resolveQlipOptions = ({
       override?.ignoreElements ??
       story?.ignoreElements ??
       defaults.ignoreElements,
+    auto: override?.auto ?? story?.auto ?? defaults.auto,
+    manual: override?.manual ?? story?.manual ?? defaults.manual,
+    error: override?.error ?? story?.error ?? defaults.error,
   };
 };

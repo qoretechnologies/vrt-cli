@@ -11,6 +11,9 @@ export interface QlipCaptureOptions {
   waitForIdleMs?: number;
   maxWaitForIdleMs?: number;
   ignoreElements?: string[];
+  auto?: boolean;
+  manual?: boolean;
+  error?: boolean;
 }
 
 export interface QlipParameters extends QlipCaptureOptions {

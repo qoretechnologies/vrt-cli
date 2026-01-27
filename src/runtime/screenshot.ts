@@ -482,11 +482,24 @@ export const screenshot = async (
   nameOrOptions?: string | QlipScreenshotOptions,
   options?: QlipScreenshotOptions,
 ) => {
+  const runtime = initRuntimeState();
+  if (!runtime) {
+    return;
+  }
   const { name, options: resolvedOptions } = resolveManualArgs(
     nameOrOptions,
     options,
   );
   const story = resolveStoryInfo(ctx);
+  const params = story.parameters;
+  const finalOptions = resolveQlipOptions({
+    defaults: runtime.config.defaults,
+    story: params,
+    override: resolvedOptions,
+  });
+  if (!finalOptions.manual) {
+    return;
+  }
   await captureScreenshot({
     kind: 'manual',
     story,
@@ -498,8 +511,17 @@ export const screenshot = async (
 type QlipTestContext = TestContext & { story?: QlipStoryContext };
 
 export const captureAutoScreenshot = async (ctx: QlipTestContext) => {
+  const runtime = initRuntimeState();
+  if (!runtime) {
+    return;
+  }
   const storyContext = ctx.story ?? {};
   const story = resolveStoryInfo(storyContext);
+  const params = story.parameters;
+  const resolvedOptions = resolveQlipOptions({ defaults: runtime.config.defaults, story: params });
+  if (!resolvedOptions.auto) {
+    return;
+  }
   const metaStoryId = (ctx.task.meta as { storyId?: string } | undefined)
     ?.storyId;
   if (!story.id && typeof metaStoryId === 'string') {
@@ -539,7 +561,11 @@ export const captureErrorScreenshot = async (ctx: QlipTestContext) => {
     story.id = errorMetaStoryId;
   }
   const params = story.parameters;
-  if (resolveQlipOptions({ defaults: runtime.config.defaults, story: params }).skip) {
+  const resolvedOptions = resolveQlipOptions({ defaults: runtime.config.defaults, story: params });
+  if (resolvedOptions.skip) {
+    return;
+  }
+  if (!resolvedOptions.error) {
     return;
   }
   if (!shouldCaptureOnError(runtime.config.defaults, params)) {

@@ -44,6 +44,9 @@ export const qlipVitestPlugin = (
           waitForIdleMs: options.waitForIdleMs ?? 300,
           maxWaitForIdleMs: options.maxWaitForIdleMs ?? 2000,
           ignoreElements: options.ignoreElements ?? [],
+          auto: options.auto ?? true,
+          manual: options.manual ?? true,
+          error: options.error ?? true,
         },
         tool: { name: TOOL_NAME, version },
       };
