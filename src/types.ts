@@ -1,44 +1,84 @@
-export interface Story {
-  storyId: string;
-  title?: string;
+export interface QlipViewport {
+  width: number;
+  height: number;
+}
+
+export interface QlipCaptureOptions {
+  skip?: boolean;
+  viewport?: QlipViewport;
+  disableAnimations?: boolean;
+  pauseAnimationsAtEnd?: boolean;
+  waitForIdleMs?: number;
+  maxWaitForIdleMs?: number;
+  ignoreElements?: string[];
+  auto?: boolean;
+  manual?: boolean;
+  error?: boolean;
+}
+
+export interface QlipParameters extends QlipCaptureOptions {
+  captureOnError?: boolean;
+}
+
+export interface QlipPluginOptions extends QlipCaptureOptions {
+  outputDir?: string;
+  buildId?: string;
+  captureOnError?: boolean;
+}
+
+export type QlipResolvedDefaults = Required<QlipCaptureOptions> & {
+  outputDir: string;
+  captureOnError: boolean;
+};
+
+export interface QlipRuntimeConfig {
+  buildId: string;
+  outputDir: string;
+  buildDir: string;
+  defaults: QlipResolvedDefaults;
+  tool: { name: string; version: string };
+}
+
+export interface QlipScreenshotOptions extends QlipCaptureOptions {
   name?: string;
 }
 
-export interface DiscoverResult {
-  baseUrl: string;
-  stories: Story[];
+export interface QlipStoryContext {
+  id?: string;
+  title?: string;
+  name?: string;
+  parameters?: { qlip?: QlipParameters };
 }
 
-export interface CaptureOptions {
-  url: string;
-  outDir: string;
-  buildId?: string;
-  concurrency: number;
-  timeout: number;
-  viewport: { width: number; height: number };
-  waitBeforeScreenshot: number;
-  headless: boolean;
-  fullPage: boolean;
-  include?: string[];
-  exclude?: string[];
-}
+export type QlipEntryKind = 'auto' | 'manual';
+export type QlipEntryStatus = 'captured' | 'skipped' | 'failed';
 
-export interface StoryResult extends Story {
-  url: string;
-  status: 'captured' | 'failed';
-  screenshotPath?: string;
-  error?: { message: string; stack?: string } | null;
+export interface QlipManifestEntry {
+  kind: QlipEntryKind;
+  storyId: string;
+  storyTitle?: string;
+  storyName?: string;
+  screenshotName: string;
+  path: string;
+  viewport: QlipViewport;
+  status: QlipEntryStatus;
+  error: { message: string; stack?: string } | null;
   timings: { ms: number };
 }
 
-export interface CaptureRun {
+export interface QlipManifest {
+  tool: { name: string; version: string };
   buildId: string;
-  results: StoryResult[];
+  createdAt: string;
+  outputDir: string;
+  defaults: QlipResolvedDefaults;
   stats: {
-    total: number;
-    captured: number;
+    storiesTotal: number;
+    capturedAuto: number;
+    capturedManual: number;
+    skipped: number;
     failed: number;
     durationMs: number;
   };
-  manifestPath: string;
+  entries: QlipManifestEntry[];
 }

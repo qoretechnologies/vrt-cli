@@ -1,67 +1,131 @@
-# vrt
+# Qlip
 
-Local-first Storybook visual capture CLI. Runs against an existing Storybook instance, takes Playwright Chromium screenshots for every story, and writes a manifest alongside the images. No cloud or upload steps.
+Qlip is a Storybook screenshot capture tool that plugs into the Storybook Vitest addon. Add one Vitest plugin and every story automatically gets a screenshot after the test finishes. Use `screenshot()` inside a play function to capture intermediate states.
 
 ## Install
 
 ```bash
-npm install -g @vrt/vrt
-# or
-npm install --save-dev @vrt/vrt
+npm install --save-dev @qoretechnologies/qlip
 ```
 
-## Usage
+## Vitest setup
 
-1. Start your Storybook locally (e.g. `npm run storybook`).
-2. Run capture:
+```ts
+import { defineConfig } from 'vitest/config';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { storybookTest } from '@storybook/addon-vitest/vitest-plugin';
+import { playwright } from '@vitest/browser-playwright';
+import { qlipVitestPlugin } from '@qoretechnologies/qlip';
 
-```bash
-vrt capture --url http://localhost:6006 --out ./.vrt --concurrency 4 --timeout 30000 --viewport 1280x720 --wait 200
+const dirname =
+  typeof __dirname !== 'undefined'
+    ? __dirname
+    : path.dirname(fileURLToPath(import.meta.url));
+
+export default defineConfig({
+  test: {
+    projects: [
+      {
+        extends: true,
+        plugins: [
+          storybookTest({
+            configDir: path.join(dirname, '.storybook'),
+          }),
+          qlipVitestPlugin(),
+        ],
+        test: {
+          name: 'storybook',
+          browser: {
+            enabled: true,
+            headless: true,
+            provider: playwright({}),
+            instances: [{ browser: 'chromium' }],
+          },
+          setupFiles: ['.storybook/vitest.setup.ts'],
+        },
+      },
+    ],
+  },
+});
 ```
 
-### Options
+## Manual screenshots inside play
 
-- `--url` Storybook base URL (default `http://localhost:6006`).
-- `--out` Output directory (default `./.vrt`).
-- `--concurrency` Concurrent pages (default `4`).
-- `--timeout` Navigation timeout in ms (default `30000`).
-- `--viewport` `WIDTHxHEIGHT` viewport (default `1280x720`).
-- `--wait` Extra ms after load before screenshot (default `200`).
-- `--headful` Run browser with UI (default headless).
-- `--full-page` Capture full page (default viewport only).
-- `--include` One or more substrings to keep matching storyIds.
-- `--exclude` One or more substrings to skip storyIds.
-- `--build-id` Override the timestamp-based build folder name.
+Use the existing **"Logged In"** story as a real-world example:
 
-### Output layout
+```ts
+import { screenshot } from '@qoretechnologies/qlip';
 
-```
-.vrt/
-  screenshots/
-    <buildId>/
-      <storyId>.png
-      manifest.json
+export const LoggedIn = {
+  play: async (ctx) => {
+    // interactions and assertions...
+    await screenshot(ctx, 'after-login');
+  },
+};
 ```
 
-`buildId` defaults to `YYYYMMDD-HHmmss` (UTC). Story IDs are sanitized for filenames. The manifest stores tool info, base URL, options used, timing and status for each story, and relative screenshot paths.
+## Parameters
 
-### Exit codes
+Configure screenshots per story via `parameters.qlip`:
 
-- `0` when discovery succeeds and at least one story is captured (even if some fail).
-- `1` when discovery fails or every story capture fails.
+```ts
+export const LoggedIn = {
+  parameters: {
+    qlip: {
+      skip: false,
+      viewport: { width: 1280, height: 720 },
+      disableAnimations: true,
+      pauseAnimationsAtEnd: false,
+      captureOnError: false,
+      waitForIdleMs: 300,
+      maxWaitForIdleMs: 2000,
+      ignoreElements: ['.toast', '[data-qlip-ignore]'],
+    },
+  },
+};
+```
 
-### Filtering
+Options precedence:
 
-Use `--include` to keep only storyIds containing any provided substrings, and `--exclude` to drop storyIds containing any provided substrings. Includes are applied before excludes.
+1. Explicit options passed to `screenshot()`
+2. `parameters.qlip`
+3. Plugin defaults
 
-## Troubleshooting
+## Plugin options
 
-- **Storybook endpoints not found**: The CLI tries `/index.json`, then `/storybook-index.json`, then `/stories.json`. Ensure Storybook is running and reachable.
-- **CORS or HTTPS**: Use the full Storybook URL and consider `--headful` if your app requires user fonts or permissions.
-- **Slow loading stories**: Increase `--timeout` or `--wait` to allow late fonts/layouts before capturing.
-- **Playwright missing dependencies**: Install system deps listed in the Playwright docs (mostly for Linux CI).
+```ts
+qlipVitestPlugin({
+  outputDir: './qlip/screenshots',
+  viewport: { width: 1280, height: 720 },
+  disableAnimations: false,
+  pauseAnimationsAtEnd: false,
+  captureOnError: false,
+  waitForIdleMs: 300,
+  maxWaitForIdleMs: 2000,
+  ignoreElements: [],
+});
+```
 
-## Tests
+`waitForIdleMs` waits for DOM mutations to settle before taking a screenshot. This is especially useful for animation libraries like `react-spring` that update inline styles via `requestAnimationFrame`, which bypasses CSS-based animation disabling. Increase it if you still catch mid-transition frames, or lower it for faster runs when your UI is static. `maxWaitForIdleMs` caps the wait so stories with continuously changing UI still complete.
 
-- Unit tests (discovery, parsing, paths, manifest, filtering) run with `npm test`.
-- Optional integration test (real Playwright + tiny HTTP server): enable with `VRT_E2E=1 npm test`.
+`ignoreElements` lets you provide CSS selectors to mask before capture. Qlip draws solid overlays on matching elements so layout stays intact while visual diffs ignore those regions.
+
+## Output layout
+
+```
+./qlip/screenshots/
+  <buildId>/
+    stories/
+      auto/<storyTitle>--<storyName>.png
+      manual/<storyTitle>--<storyName>--<screenshotName>.png
+      error/<storyTitle>--<storyName>--qlip-auto-error-capture.png
+    manifest.json
+```
+
+- `buildId` defaults to `YYYYMMDD-HHmmss`
+- `parameters.qlip.skip === true` disables all captures for that story
+
+## Manifest
+
+Each run writes `manifest.json` inside the build folder with tool metadata, defaults, stats, and per-screenshot entries (auto + manual).

@@ -1,15 +1,21 @@
 {
-  "name": "@vrt/vrt",
+  "name": "@qoretechnologies/qlip",
   "version": "0.1.0",
-  "description": "Local-first Storybook visual regression capture CLI",
+  "description": "Storybook screenshot capture for the Vitest addon",
   "type": "module",
   "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./dist/index.js",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "browser": "./dist/browser.js",
+      "default": "./dist/index.js"
+    },
+    "./browser": {
+      "types": "./dist/browser.d.ts",
+      "default": "./dist/browser.js"
+    },
     "./package.json": "./package.json"
-  },
-  "bin": {
-    "vrt": "./dist/cli.js"
   },
   "files": [
     "dist"
@@ -21,20 +27,18 @@
     "node": ">=18"
   },
   "scripts": {
-    "dev": "tsx src/cli.ts",
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
+    "test:unit": "vitest --project unit",
+    "test:stories": "vitest --project storybook",
     "test:watch": "vitest",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "precheck": "npm run lint && npm run typecheck && npm run test -- --project unit"
   },
-  "dependencies": {
-    "commander": "^11.0.0",
-    "p-limit": "^4.0.0",
-    "playwright": "^1.40.0"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@types/node": "^20.10.0",
     "@typescript-eslint/eslint-plugin": "^6.10.0",
@@ -43,11 +47,11 @@
     "prettier": "^3.0.3",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
+    "playwright": "^1.40.0",
     "tsx": "^4.7.0",
     "typescript": "^5.2.2",
     "storybook": "^10.2.0",
     "@storybook/react-vite": "^10.2.0",
-    "@chromatic-com/storybook": "^5.0.0",
     "@storybook/addon-vitest": "^10.2.0",
     "@storybook/addon-a11y": "^10.2.0",
     "@storybook/addon-docs": "^10.2.0",

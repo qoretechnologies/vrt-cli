@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { storybookTest } from '@storybook/addon-vitest/vitest-plugin';
 import { playwright } from '@vitest/browser-playwright';
+import { qlipVitestPlugin } from './src/index.js';
 const dirname =
   typeof __dirname !== 'undefined'
     ? __dirname
@@ -12,8 +13,6 @@ const dirname =
 export default defineConfig({
   test: {
     environment: 'node',
-    include: ['tests/**/*.test.ts', 'tests/**/*.spec.ts'],
-    exclude: ['tests/e2e/**'],
     coverage: {
       reporter: ['text', 'json', 'html'],
       thresholds: {
@@ -26,13 +25,32 @@ export default defineConfig({
     projects: [
       {
         extends: true,
+        test: {
+          name: 'unit',
+          include: ['tests/**/*.test.ts', 'tests/**/*.spec.ts'],
+        },
+      },
+      {
+        extends: true,
         plugins: [
           // The plugin will run tests for the stories defined in your Storybook config
           // See options at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon#storybooktest
           storybookTest({
             configDir: path.join(dirname, '.storybook'),
           }),
+          qlipVitestPlugin({
+            outputDir: process.env.QLIP_OUTPUT_DIR,
+          }),
         ],
+        optimizeDeps: {
+          include: [
+            'react',
+            'react-dom',
+            'react/jsx-dev-runtime',
+            '@storybook/react-vite',
+            '@storybook/addon-vitest',
+          ],
+        },
         test: {
           name: 'storybook',
           browser: {

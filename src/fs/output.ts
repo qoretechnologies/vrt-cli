@@ -1,87 +1,142 @@
-import { mkdir, writeFile } from 'node:fs/promises';
-import path from 'node:path';
-import pkg from '../../package.json' with { type: 'json' };
-import { CaptureOptions, StoryResult } from '../types.js';
+import { QlipManifest, QlipResolvedDefaults } from '../types.js';
 
-const TOOL_NAME = 'vrt';
-const TOOL_VERSION = (pkg as { version?: string }).version || '0.0.0';
+export const TOOL_NAME = 'qlip';
+
+export const DEFAULT_OUTPUT_DIR = './qlip/screenshots';
+export const AUTO_ERROR_SCREENSHOT_BASE = 'qlip-auto-error-capture';
+export const DEFAULT_VIEWPORT = { width: 1280, height: 720 };
 
 export const generateBuildId = (date: Date = new Date()): string => {
   const pad = (num: number): string => String(num).padStart(2, '0');
-  const year = date.getUTCFullYear();
-  const month = pad(date.getUTCMonth() + 1);
-  const day = pad(date.getUTCDate());
-  const hours = pad(date.getUTCHours());
-  const minutes = pad(date.getUTCMinutes());
-  const seconds = pad(date.getUTCSeconds());
+  const year = date.getFullYear();
+  const month = pad(date.getMonth() + 1);
+  const day = pad(date.getDate());
+  const hours = pad(date.getHours());
+  const minutes = pad(date.getMinutes());
+  const seconds = pad(date.getSeconds());
   return `${year}${month}${day}-${hours}${minutes}${seconds}`;
 };
 
-export const sanitizeStoryId = (storyId: string): string =>
-  storyId.replace(/[^a-zA-Z0-9_.-]/g, '_');
+export const sanitizeSegment = (value: string): string =>
+  value.trim().replace(/[^a-zA-Z0-9_.-]/g, '_');
 
-export const buildPaths = (
-  outDir: string,
-  buildId: string,
-  storyId?: string,
-) => {
-  const buildDir = path.resolve(outDir, 'screenshots', buildId);
-  const manifestPath = path.join(buildDir, 'manifest.json');
+export const joinPath = (...parts: string[]): string => {
+  const normalized = parts
+    .filter((part) => part.length > 0)
+    .map((part) => part.replace(/\\/g, '/'));
 
-  if (!storyId) {
-    return { buildDir, manifestPath };
+  if (normalized.length === 0) {
+    return '';
   }
 
-  const safeId = sanitizeStoryId(storyId);
-  const filename = `${safeId}.png`;
-  const screenshotPath = path.join(buildDir, filename);
-  const screenshotRelativePath = path.posix.join(
-    'screenshots',
-    buildId,
-    filename,
-  );
-
-  return { buildDir, manifestPath, screenshotPath, screenshotRelativePath };
+  let result = normalized[0];
+  for (let index = 1; index < normalized.length; index += 1) {
+    const part = normalized[index].replace(/^\/+/, '');
+    result = result.replace(/\/+$/, '');
+    result = `${result}/${part}`;
+  }
+  return result;
 };
 
-export const ensureDir = async (dir: string) => mkdir(dir, { recursive: true });
-
-interface ManifestInput {
-  baseUrl: string;
-  buildId: string;
-  options: Partial<CaptureOptions>;
-  stories: StoryResult[];
-  stats: {
-    total: number;
-    captured: number;
-    failed: number;
-    durationMs: number;
+const splitStoryId = (storyId: string) => {
+  const [titlePart, namePart] = storyId.split('--');
+  return {
+    titlePart: titlePart || storyId,
+    namePart: namePart || undefined,
   };
-  createdAt?: Date;
-}
+};
+
+const buildStoryBaseName = ({
+  storyTitle,
+  storyName,
+  storyId,
+}: {
+  storyTitle?: string;
+  storyName?: string;
+  storyId: string;
+}) => {
+  const { titlePart, namePart } = splitStoryId(storyId);
+  const resolvedTitle = storyTitle ?? titlePart;
+  const resolvedName =
+    storyName && storyName !== 'storyFn' ? storyName : namePart ?? storyId;
+  const safeTitle = sanitizeSegment(resolvedTitle);
+  const safeName = sanitizeSegment(resolvedName);
+  return `${safeTitle}--${safeName}`;
+};
+
+const buildKindDir = (kind: 'auto' | 'manual' | 'error') =>
+  joinPath('stories', kind);
+
+export const buildAutoScreenshotPath = ({
+  buildDir,
+  storyId,
+  storyTitle,
+  storyName,
+}: {
+  buildDir: string;
+  storyId: string;
+  storyTitle?: string;
+  storyName?: string;
+}) => {
+  const baseName = buildStoryBaseName({ storyTitle, storyName, storyId });
+  const relativePath = `${buildKindDir('auto')}/${baseName}.png`;
+  return {
+    relativePath,
+    absolutePath: joinPath(buildDir, relativePath),
+  };
+};
+
+export const buildManualScreenshotPath = ({
+  buildDir,
+  storyId,
+  storyTitle,
+  storyName,
+  screenshotName,
+}: {
+  buildDir: string;
+  storyId: string;
+  storyTitle?: string;
+  storyName?: string;
+  screenshotName: string;
+}) => {
+  const baseName = buildStoryBaseName({ storyTitle, storyName, storyId });
+  const safeName = sanitizeSegment(screenshotName);
+  const kind = safeName.startsWith(AUTO_ERROR_SCREENSHOT_BASE)
+    ? 'error'
+    : 'manual';
+  const relativePath = `${buildKindDir(kind)}/${baseName}--${safeName}.png`;
+  return {
+    safeName,
+    relativePath,
+    absolutePath: joinPath(buildDir, relativePath),
+  };
+};
 
 export const createManifest = ({
-  baseUrl,
   buildId,
-  options,
-  stories,
-  stats,
+  outputDir,
+  defaults,
+  tool,
   createdAt = new Date(),
-}: ManifestInput) => ({
-  tool: { name: TOOL_NAME, version: TOOL_VERSION },
-  baseUrl,
+}: {
+  buildId: string;
+  outputDir: string;
+  defaults: QlipResolvedDefaults;
+  tool: { name: string; version: string };
+  createdAt?: Date;
+}): QlipManifest => ({
+  tool,
   buildId,
   createdAt: createdAt.toISOString(),
-  options,
-  stats,
-  stories,
+  outputDir,
+  defaults,
+  stats: {
+    storiesTotal: 0,
+    capturedAuto: 0,
+    capturedManual: 0,
+    skipped: 0,
+    failed: 0,
+    durationMs: 0,
+  },
+  entries: [],
 });
-
-export const writeManifest = async (
-  manifestPath: string,
-  manifest: Record<string, unknown>,
-): Promise<string> => {
-  await ensureDir(path.dirname(manifestPath));
-  await writeFile(manifestPath, JSON.stringify(manifest, null, 2), 'utf-8');
-  return manifestPath;
-};
